@@ -10,7 +10,7 @@
 {marker syntax}{...}
 {title:Syntax}
 {p}
-{cmd:Jaravel} {varlist}{cmd:,} {opt entity(variable) time(variable) spell(variable) treatment(variable)} [{opt we(variable)}]
+{cmd:Jaravel} {varlist}{cmd:,} {opt entity(variable) time(variable) spell(variable) treatment(variable)} [{opt we(variable) fixed(varlist)}]
 
 {marker description}{...}
 {title:Description}
@@ -27,7 +27,6 @@
 
 {phang}{opt spell(variable)} is required. It contains the cumulative count of treatment spells, e.g., it is 0 before any treatment, 1 after the first treatment starts, 2 after another change in treatment intensity, etc.
 
-{phang}{opt spell(variable)} is required. It contains the cumulative count of treatment spells, e.g., it is 0 before any treatment, 1 after the first treatment starts, 2 after another change in treatment intensity, etc. 
-
 {phang}{opt we(variable)} is optional, and specifies the variable containing weights.
 
+{phang}{opt fixed(varlist)} is optional. Fixed effects for these variables will be controlled for in the estimation.

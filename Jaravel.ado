@@ -1,12 +1,14 @@
 program Jaravel, eclass sortpreserve
 	version 17.0
-	syntax varlist(numeric fv) [if] [in], entity(string) time(string) spellvar(string) treatment(string) [we(string)]
+	syntax varlist(numeric fv) [if] [in], entity(string) time(string) spellvar(string) treatment(string) [we(string) fixed(string)]
 	marksample touse
 	
 	tempname bCardinal bNonCardinal coeffs
+	tempfile tFile
 	tempvar county_fe year_fe cons y0 yDiff employmentAcrossIndex yDiffWeighted tautemp r x1 FirstTreat spellDur w
 	gettoken depvar indepvar: varlist
 	_fv_check_depvar `depvar'
+	local len: word count `fixed'
 	
 	if "`we'"=="" {
 		qui gen double `w' = 1
@@ -21,15 +23,24 @@ program Jaravel, eclass sortpreserve
 	
 	qui reghdfe `depvar' `indepvar' if `spellvar'==0 & `touse' ///
 		[fweight=`w'], ///
-		absorb(`county_fe' = `entity' `year_fe' = `time') res(`r')
+		absorb(`entity' `time' `fixed', savefe) res(`r')
 	predict `cons', xb
 	
+	qui sort `entity' __hdfe1__
+	by `entity': replace __hdfe1__ = __hdfe1__[1]
+	qui sort `time' __hdfe2__
+	by `time': replace __hdfe2__ = __hdfe2__[1]
+	
+	local s = 2
+	while (`s'<`len'+2) {
+		local ++s
+		gettoken varx fixed:fixed
+		qui sort `varx' __hdfe`s'__
+		by `varx': replace __hdfe`s'__ = __hdfe`s'__[1]
+	}
 
-	qui sort `entity' `time'
-	by `entity': replace `county_fe' = `county_fe'[1]
-	qui sort `time' `year_fe'
-	by `time': replace `year_fe' = `year_fe'[1]
-	qui gen double `y0' = `cons' + `year_fe' + `county_fe'
+	egen double `y0' = rowtotal(`cons' __hdfe1__-__hdfe`s'__)
+	gen testVar = `y0'
 	qui gen double `yDiff' = `depvar' -`y0'
 	matrix `bCardinal' = J(1,31,.)
 	local t = 1
@@ -47,11 +58,11 @@ program Jaravel, eclass sortpreserve
 	
 	preserve 
 	qui collapse `yDiff' [fweight = `w'] if `spellvar'<=1 & `spellDur'<=8 & `spellDur'>=-6 & `touse', by(`treatment' `spellDur')
-	qui save "tempData/yDiff", replace
+	qui save `tFile', replace
 	restore
 	preserve
 	qui collapse (sum) `w' if `spellvar'<=1 & `spellDur'>=-6 & `spellDur'<=8 & `touse', by(`treatment' `spellDur')
-	qui merge 1:1 `treatment' `spellDur' using "tempData/yDiff", nogen
+	qui merge 1:1 `treatment' `spellDur' using `tFile', nogen
 	local t = 16
 	foreach x of numlist -6/8 {
 		egen double `employmentAcrossIndex' = total(`w') if `spellDur'==`x'
